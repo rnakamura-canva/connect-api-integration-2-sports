@@ -6,8 +6,6 @@ import com.example.demo.canva.client.ApiClient;
 import com.example.demo.canva.model.CreateDesignAutofillJobRequest;
 import com.example.demo.canva.model.CreateDesignAutofillJobResponse;
 import com.example.demo.canva.model.GetBrandTemplateDatasetResponse;
-import com.example.demo.canva.model.UserProfileResponse;
-import com.example.demo.service.CanvaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,36 +33,15 @@ public class SoccerController {
     @Value("${canva.api.base-url:https://api.canva.com/rest}")
     private String baseUrl;
 
-    private final CanvaService canvaService;
-
-    public SoccerController(CanvaService canvaService) {
-        this.canvaService = canvaService;
-    }
-
-    /**
-     * Helper method to add authentication info to model
-     */
-    private void addAuthInfo(HttpSession session, Model model) {
-        String accessToken = (String) session.getAttribute("access_token");
-        boolean isAuthenticated = accessToken != null && !accessToken.isEmpty();
-
-        model.addAttribute("isAuthenticated", isAuthenticated);
-
-        if (isAuthenticated) {
-            try {
-                UserProfileResponse userProfile = canvaService.getUserProfile();
-                String displayName = userProfile.getProfile() != null ?
-                    userProfile.getProfile().getDisplayName() : null;
-                model.addAttribute("displayName", displayName);
-            } catch (Exception e) {
-                model.addAttribute("displayName", null);
-            }
-        }
-    }
-
     @GetMapping("/team")
     public String team(Model model, HttpSession session) {
-        addAuthInfo(session, model);
+        // Check if user is authenticated
+        String accessToken = (String) session.getAttribute("access_token");
+        boolean isAuthenticated = accessToken != null && !accessToken.isEmpty();
+        String displayName = (String) session.getAttribute("display_name");
+
+        model.addAttribute("isAuthenticated", isAuthenticated);
+        model.addAttribute("displayName", displayName);
 
         // Retrieve team data from session if exists
         @SuppressWarnings("unchecked")
@@ -134,7 +111,13 @@ public class SoccerController {
 
     @GetMapping("/formations")
     public String formations(HttpSession session, Model model) {
-        addAuthInfo(session, model);
+        // Check if user is authenticated
+        String accessToken = (String) session.getAttribute("access_token");
+        boolean isAuthenticated = accessToken != null && !accessToken.isEmpty();
+        String displayName = (String) session.getAttribute("display_name");
+
+        model.addAttribute("isAuthenticated", isAuthenticated);
+        model.addAttribute("displayName", displayName);
 
         // Get team data from session
         @SuppressWarnings("unchecked")

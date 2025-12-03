@@ -111,6 +111,23 @@ public class OAuthController {
             session.setAttribute("refresh_token", tokenResponse.get("refresh_token"));
             session.setAttribute("expires_in", tokenResponse.get("expires_in"));
 
+            // Fetch user profile to get display name
+            try {
+                logger.info("Fetching user profile...");
+                Map<String, Object> userProfile = oauthService.getUserProfile((String) tokenResponse.get("access_token"));
+                String displayName = (String) userProfile.get("display_name");
+                session.setAttribute("display_name", displayName);
+                logger.info("User profile fetched successfully. Display name: {}", displayName);
+
+                // Add to model for the success page
+                model.addAttribute("displayName", displayName);
+                model.addAttribute("isAuthenticated", true);
+            } catch (Exception e) {
+                logger.warn("Failed to fetch user profile: {}", e.getMessage());
+                // Continue anyway, just without the display name
+                model.addAttribute("isAuthenticated", true);
+            }
+
             // Clean up PKCE parameters from both stores
             stateStore.remove(state);
             session.removeAttribute("code_verifier");

@@ -11,10 +11,10 @@ import com.example.demo.canva.model.GetDesignResponse;
 import com.example.demo.canva.model.GetListDesignResponse;
 import com.example.demo.canva.model.ListBrandTemplatesResponse;
 import com.example.demo.canva.model.ListFolderItemsResponse;
-import com.example.demo.canva.model.MoveFolderItemRequest;
 import com.example.demo.canva.model.OwnershipType;
 import com.example.demo.canva.model.UserProfileResponse;
 import com.example.demo.canva.privateapi.BrandKitApi;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -719,6 +719,7 @@ public class ApiTestController {
     @PostMapping("/folders/{folderId}/items")
     public ResponseEntity<Map<String, Object>> testListFolderItems(
             @PathVariable String folderId,
+            @RequestParam(required = false) String item_types,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -731,27 +732,44 @@ public class ApiTestController {
         }
 
         try {
+            // Configure API client
+            ApiClient apiClient = new ApiClient();
+            apiClient.setBasePath(baseUrl);
+            apiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
+
+            // Build URI with optional query parameter
+            String uri = baseUrl + "/v1/folders/" + folderId + "/items";
+            if (item_types != null && !item_types.isEmpty()) {
+                uri += "?item_types=" + item_types;
+            }
+
             // Store request details
             Map<String, Object> requestDetails = new HashMap<>();
             requestDetails.put("method", "GET");
             requestDetails.put("endpoint", "/v1/folders/" + folderId + "/items");
-            requestDetails.put("parameters", Map.of("folderId", folderId));
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("folderId", folderId);
+            if (item_types != null) {
+                parameters.put("item_types", item_types);
+            }
+            requestDetails.put("parameters", parameters);
             requestDetails.put("headers", Map.of("Authorization", "Bearer ***"));
             result.put("request", requestDetails);
 
-            // Make the API call using raw HTTP client to avoid deserialization issues
+            // Make the API call using raw JSON to avoid deserialization issues
             long startTime = System.currentTimeMillis();
-            org.springframework.web.client.RestClient restClient = org.springframework.web.client.RestClient.create();
-            String responseBody = restClient.get()
-                    .uri(baseUrl + "/v1/folders/" + folderId + "/items")
-                    .header("Authorization", "Bearer " + accessToken)
-                    .retrieve()
-                    .body(String.class);
+            String rawResponse = apiClient.getRestClient()
+                .get()
+                .uri(uri)
+                .header("Authorization", "Bearer " + accessToken)
+                .retrieve()
+                .body(String.class);
             long duration = System.currentTimeMillis() - startTime;
 
-            // Parse the JSON manually
-            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            Map<String, Object> jsonResponse = objectMapper.readValue(responseBody, Map.class);
+            // Parse the raw JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> folderItemsResponse = objectMapper.readValue(rawResponse, Map.class);
 
             // Prepare response details
             Map<String, Object> responseDetails = new HashMap<>();
@@ -759,11 +777,11 @@ public class ApiTestController {
             responseDetails.put("status", "OK");
             responseDetails.put("duration", duration + "ms");
             responseDetails.put("timestamp", Instant.now().toString());
-            responseDetails.put("body", jsonResponse);
+            responseDetails.put("body", folderItemsResponse);
 
             result.put("response", responseDetails);
             result.put("success", true);
-            result.put("items", jsonResponse.get("items"));
+            result.put("items", folderItemsResponse.get("items"));
 
             return ResponseEntity.ok(result);
 
@@ -798,8 +816,9 @@ public class ApiTestController {
         }
     }
 
-    @PostMapping("/folders/move")
-    public ResponseEntity<Map<String, Object>> testMoveFolder(
+    @PostMapping("/folders/items/{itemId}/move")
+    public ResponseEntity<Map<String, Object>> testMoveFolderItem(
+            @PathVariable String itemId,
             @RequestBody Map<String, String> requestBody,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
@@ -812,52 +831,61 @@ public class ApiTestController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
         }
 
-        // Extract parameters from request body
-        String itemId = requestBody.get("itemId");
-        String toFolderId = requestBody.get("toFolderId");
-
-        if (itemId == null || itemId.isEmpty()) {
-            result.put("error", "Missing required parameter: itemId");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
-        }
-        if (toFolderId == null || toFolderId.isEmpty()) {
-            result.put("error", "Missing required parameter: toFolderId");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
-        }
-
         try {
+            String destinationFolderId = requestBody.get("destination_folder_id");
+
             // Store request details
             Map<String, Object> requestDetails = new HashMap<>();
             requestDetails.put("method", "POST");
             requestDetails.put("endpoint", "/v1/folders/move");
-            requestDetails.put("body", Map.of(
-                    "item_id", itemId,
-                    "to_folder_id", toFolderId
-            ));
-            requestDetails.put("headers", Map.of("Authorization", "Bearer ***"));
+            Map<String, Object> body = new HashMap<>();
+            body.put("to_folder_id", destinationFolderId);
+            body.put("item_id", itemId);
+            requestDetails.put("body", body);
+            requestDetails.put("timestamp", Instant.now().toString());
+
             result.put("request", requestDetails);
 
-            // Call the Canva API
+            // Configure API client
             ApiClient apiClient = new ApiClient();
             apiClient.setBasePath(baseUrl);
             apiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
-            FolderApi folderApi = new FolderApi(apiClient);
-
-            MoveFolderItemRequest moveFolderItemRequest = new MoveFolderItemRequest();
-            moveFolderItemRequest.setItemId(itemId);
-            moveFolderItemRequest.setToFolderId(toFolderId);
 
             long startTime = System.currentTimeMillis();
-            folderApi.moveFolderItem(moveFolderItemRequest);
+
+            // Make request using RestClient directly
+            String uri = baseUrl + "/v1/folders/move";
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonBody = objectMapper.writeValueAsString(body);
+
+            ResponseEntity<String> response = apiClient.getRestClient()
+                .post()
+                .uri(uri)
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "application/json")
+                .body(jsonBody)
+                .retrieve()
+                .toEntity(String.class);
             long duration = System.currentTimeMillis() - startTime;
 
-            // Prepare response details (204 No Content response)
+            // Prepare response details
             Map<String, Object> responseDetails = new HashMap<>();
-            responseDetails.put("statusCode", 204);
-            responseDetails.put("status", "No Content");
+            responseDetails.put("statusCode", response.getStatusCode().value());
+            responseDetails.put("status", response.getStatusCode().toString());
             responseDetails.put("duration", duration + "ms");
             responseDetails.put("timestamp", Instant.now().toString());
-            responseDetails.put("body", null);
+
+            // Parse response body if present
+            String rawResponse = response.getBody();
+            if (rawResponse != null && !rawResponse.isEmpty()) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> moveItemResponse = objectMapper.readValue(rawResponse, Map.class);
+                responseDetails.put("body", moveItemResponse);
+            } else {
+                // Empty response (e.g., 204 No Content)
+                responseDetails.put("body", Map.of("message", "Item moved successfully (no content returned)"));
+            }
 
             result.put("response", responseDetails);
             result.put("success", true);
@@ -865,32 +893,27 @@ public class ApiTestController {
             return ResponseEntity.ok(result);
 
         } catch (RestClientResponseException e) {
+            e.printStackTrace();
+            // Prepare error response details
             Map<String, Object> responseDetails = new HashMap<>();
             responseDetails.put("statusCode", e.getStatusCode().value());
             responseDetails.put("status", e.getStatusText());
-            responseDetails.put("duration", "N/A");
             responseDetails.put("timestamp", Instant.now().toString());
-
-            try {
-                responseDetails.put("body", new com.fasterxml.jackson.databind.ObjectMapper().readValue(
-                        e.getResponseBodyAsString(), Map.class));
-            } catch (Exception ex) {
-                responseDetails.put("body", Map.of("error", e.getResponseBodyAsString()));
-            }
+            responseDetails.put("errorBody", e.getResponseBodyAsString());
 
             result.put("response", responseDetails);
             result.put("success", false);
-            result.put("error", "API call failed with status " + e.getStatusCode().value());
+            result.put("error", e.getMessage());
 
             return ResponseEntity.status(HttpStatus.OK).body(result);
 
         } catch (Exception e) {
+            e.printStackTrace();
+            // Prepare error response details
             Map<String, Object> responseDetails = new HashMap<>();
-            responseDetails.put("statusCode", null);
-            responseDetails.put("status", "ERROR");
-            responseDetails.put("duration", "N/A");
+            responseDetails.put("error", e.getClass().getSimpleName());
+            responseDetails.put("message", e.getMessage());
             responseDetails.put("timestamp", Instant.now().toString());
-            responseDetails.put("body", Map.of("error", e.getMessage()));
 
             result.put("response", responseDetails);
             result.put("success", false);

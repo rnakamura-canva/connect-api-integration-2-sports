@@ -141,4 +141,20 @@ public class CanvaOAuthService {
 
         return response.getBody();
     }
+
+    /**
+     * Get user profile information from Canva API
+     */
+    public Map<String, Object> getUserProfile(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+
+        ResponseEntity<Map> response = restClient.get()
+                .uri("https://api.canva.com/rest/v1/users/me/profile")
+                .headers(h -> h.addAll(headers))
+                .retrieve()
+                .toEntity(Map.class);
+
+        return response.getBody();
+    }
 }
