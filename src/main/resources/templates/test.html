@@ -638,6 +638,87 @@
             </div>
         </div>
 
+        <!-- Asset APIs -->
+        <h2 class="api-group-header">📦 Asset APIs</h2>
+
+        <div class="api-section">
+            <h2>Upload Asset</h2>
+            <p style="color: #666; margin: 10px 0;">Upload an asset (image, video, audio) to your Canva content library.</p>
+
+            <div style="margin: 20px 0;">
+                <label for="assetFileInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Select File (required):</label>
+                <input type="file" id="assetFileInput" accept="image/*,video/*,audio/*" style="padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; width: 100%; max-width: 500px;">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">Supported: images (JPG, PNG, etc.), videos (MP4, MOV, etc.), audio files</p>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <label for="assetNameInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Asset Name (optional):</label>
+                <input type="text" id="assetNameInput" placeholder="Leave empty to use filename" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">Custom name for the asset. Defaults to filename if not provided.</p>
+            </div>
+
+            <button id="testAssetUploadBtn" class="btn" onclick="testAssetUpload()">
+                Upload Asset
+                <span id="loadingSpinner10" class="spinner" style="display: none;"></span>
+            </button>
+
+            <div id="resultBox10" class="result-box">
+                <div id="uploadJobInfo10" style="margin-bottom: 20px;"></div>
+
+                <details class="collapsible-section" open>
+                    <summary>📡 REQUEST</summary>
+                    <div class="code-block" id="requestDetails10"></div>
+                </details>
+
+                <details class="collapsible-section" open>
+                    <summary>📥 RESPONSE</summary>
+                    <div style="margin: 10px 0;">
+                        <span class="label">Status Code:</span>
+                        <span id="statusCode10" class="status-badge"></span>
+                        <span class="label" style="margin-left: 20px;">Duration:</span>
+                        <span id="duration10"></span>
+                    </div>
+                    <div class="code-block" id="responseDetails10"></div>
+                </details>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h2>Get Asset Upload Job Status</h2>
+            <p style="color: #666; margin: 10px 0;">Check the status of an asset upload job.</p>
+
+            <div style="margin: 20px 0;">
+                <label for="uploadJobIdInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Upload Job ID (required):</label>
+                <input type="text" id="uploadJobIdInput" placeholder="e.g., Aab45c..." style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">The job ID returned from the Upload Asset endpoint.</p>
+            </div>
+
+            <button id="testGetUploadJobBtn" class="btn" onclick="testGetAssetUploadJob()">
+                Get Upload Job Status
+                <span id="loadingSpinner11" class="spinner" style="display: none;"></span>
+            </button>
+
+            <div id="resultBox11" class="result-box">
+                <div id="jobStatusInfo11" style="margin-bottom: 20px;"></div>
+
+                <details class="collapsible-section" open>
+                    <summary>📡 REQUEST</summary>
+                    <div class="code-block" id="requestDetails11"></div>
+                </details>
+
+                <details class="collapsible-section" open>
+                    <summary>📥 RESPONSE</summary>
+                    <div style="margin: 10px 0;">
+                        <span class="label">Status Code:</span>
+                        <span id="statusCode11" class="status-badge"></span>
+                        <span class="label" style="margin-left: 20px;">Duration:</span>
+                        <span id="duration11"></span>
+                    </div>
+                    <div class="code-block" id="responseDetails11"></div>
+                </details>
+            </div>
+        </div>
+
         <!-- Folder APIs -->
         <h2 class="api-group-header">📁 Folder APIs</h2>
 
@@ -1541,6 +1622,241 @@
                         statusCode.textContent = 'ERROR';
                     }
                     duration.textContent = 'N/A';
+                    responseDetails.textContent = JSON.stringify(data.response || data, null, 2);
+                }
+
+                resultBox.style.display = 'block';
+
+            } catch (error) {
+                resultBox.className = 'result-box error';
+                statusCode.className = 'status-badge error';
+                statusCode.textContent = 'ERROR';
+                duration.textContent = 'N/A';
+                requestDetails.textContent = 'Failed to make request';
+                responseDetails.textContent = JSON.stringify({
+                    error: error.message
+                }, null, 2);
+                resultBox.style.display = 'block';
+            } finally {
+                // Re-enable button and hide spinner
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function testAssetUpload() {
+            const btn = document.getElementById('testAssetUploadBtn');
+            const spinner = document.getElementById('loadingSpinner10');
+            const resultBox = document.getElementById('resultBox10');
+            const requestDetails = document.getElementById('requestDetails10');
+            const responseDetails = document.getElementById('responseDetails10');
+            const statusCode = document.getElementById('statusCode10');
+            const duration = document.getElementById('duration10');
+            const uploadJobInfo = document.getElementById('uploadJobInfo10');
+
+            const fileInput = document.getElementById('assetFileInput');
+            const assetNameInput = document.getElementById('assetNameInput');
+
+            const file = fileInput.files[0];
+            const assetName = assetNameInput.value.trim();
+
+            // Validate file
+            if (!file) {
+                alert('Please select a file to upload');
+                return;
+            }
+
+            // Disable button and show spinner
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            resultBox.style.display = 'none';
+            uploadJobInfo.innerHTML = '';
+
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+                if (assetName) {
+                    formData.append('assetName', assetName);
+                }
+
+                const response = await fetch('/api/test/asset-upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // Show request details
+                requestDetails.textContent = JSON.stringify(data.request, null, 2);
+
+                // Show response details
+                if (data.success) {
+                    resultBox.className = 'result-box success';
+                    statusCode.className = 'status-badge success';
+                    statusCode.textContent = data.response.statusCode + ' ' + data.response.status;
+                    duration.textContent = data.response.duration;
+                    responseDetails.textContent = JSON.stringify(data.response.body, null, 2);
+
+                    // Display job info
+                    if (data.job) {
+                        let jobStatusColor = '#6c757d';
+                        if (data.job.status === 'success') {
+                            jobStatusColor = '#28a745';
+                        } else if (data.job.status === 'failed') {
+                            jobStatusColor = '#dc3545';
+                        } else if (data.job.status === 'in_progress') {
+                            jobStatusColor = '#ffc107';
+                        }
+
+                        uploadJobInfo.innerHTML = `
+                            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid ${jobStatusColor};">
+                                <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Upload Job Created</h3>
+                                <div style="margin-bottom: 8px;"><strong>Job ID:</strong> <code style="background-color: #e9ecef; padding: 2px 6px; border-radius: 3px;">${data.job.id}</code></div>
+                                <div style="margin-bottom: 8px;"><strong>Status:</strong> <span style="color: ${jobStatusColor}; font-weight: bold;">${data.job.status}</span></div>
+                                ${data.job.asset ? `<div style="margin-bottom: 8px;"><strong>Asset ID:</strong> <code style="background-color: #e9ecef; padding: 2px 6px; border-radius: 3px;">${data.job.asset.id}</code></div>` : ''}
+                                ${data.job.error ? `<div style="margin-top: 10px; padding: 10px; background-color: #f8d7da; border-radius: 4px; color: #721c24;"><strong>Error:</strong> ${JSON.stringify(data.job.error)}</div>` : ''}
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 12px; color: #6c757d;">
+                                    💡 Copy the Job ID to check upload status using the "Get Asset Upload Job Status" endpoint below
+                                </div>
+                            </div>
+                        `;
+
+                        // Auto-populate the job ID in the get upload job input
+                        document.getElementById('uploadJobIdInput').value = data.job.id;
+                    }
+                } else {
+                    resultBox.className = 'result-box error';
+                    statusCode.className = 'status-badge error';
+                    if (data.response && data.response.statusCode) {
+                        statusCode.textContent = data.response.statusCode + ' ' + data.response.status;
+                    } else {
+                        statusCode.textContent = 'ERROR';
+                    }
+                    duration.textContent = data.response && data.response.duration ? data.response.duration : 'N/A';
+                    responseDetails.textContent = JSON.stringify(data.response || data, null, 2);
+                }
+
+                resultBox.style.display = 'block';
+
+            } catch (error) {
+                resultBox.className = 'result-box error';
+                statusCode.className = 'status-badge error';
+                statusCode.textContent = 'ERROR';
+                duration.textContent = 'N/A';
+                requestDetails.textContent = 'Failed to make request';
+                responseDetails.textContent = JSON.stringify({
+                    error: error.message
+                }, null, 2);
+                resultBox.style.display = 'block';
+            } finally {
+                // Re-enable button and hide spinner
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function testGetAssetUploadJob() {
+            const btn = document.getElementById('testGetUploadJobBtn');
+            const spinner = document.getElementById('loadingSpinner11');
+            const resultBox = document.getElementById('resultBox11');
+            const requestDetails = document.getElementById('requestDetails11');
+            const responseDetails = document.getElementById('responseDetails11');
+            const statusCode = document.getElementById('statusCode11');
+            const duration = document.getElementById('duration11');
+            const jobStatusInfo = document.getElementById('jobStatusInfo11');
+
+            const uploadJobIdInput = document.getElementById('uploadJobIdInput');
+            const jobId = uploadJobIdInput.value.trim();
+
+            // Validate input
+            if (!jobId) {
+                alert('Please enter an Upload Job ID');
+                return;
+            }
+
+            // Disable button and show spinner
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            resultBox.style.display = 'none';
+            jobStatusInfo.innerHTML = '';
+
+            try {
+                const response = await fetch(`/api/test/asset-upload/${encodeURIComponent(jobId)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                // Show request details
+                requestDetails.textContent = JSON.stringify(data.request, null, 2);
+
+                // Show response details
+                if (data.success) {
+                    resultBox.className = 'result-box success';
+                    statusCode.className = 'status-badge success';
+                    statusCode.textContent = data.response.statusCode + ' ' + data.response.status;
+                    duration.textContent = data.response.duration;
+                    responseDetails.textContent = JSON.stringify(data.response.body, null, 2);
+
+                    // Display job status info
+                    if (data.job) {
+                        let jobStatusColor = '#6c757d';
+                        let jobStatusBgColor = '#e9ecef';
+                        let statusIcon = '⏳';
+
+                        if (data.job.status === 'success') {
+                            jobStatusColor = '#28a745';
+                            jobStatusBgColor = '#d4edda';
+                            statusIcon = '✅';
+                        } else if (data.job.status === 'failed') {
+                            jobStatusColor = '#dc3545';
+                            jobStatusBgColor = '#f8d7da';
+                            statusIcon = '❌';
+                        } else if (data.job.status === 'in_progress') {
+                            jobStatusColor = '#ffc107';
+                            jobStatusBgColor = '#fff3cd';
+                            statusIcon = '⏳';
+                        }
+
+                        jobStatusInfo.innerHTML = `
+                            <div style="padding: 15px; background-color: ${jobStatusBgColor}; border-radius: 6px; border-left: 4px solid ${jobStatusColor};">
+                                <h3 style="margin: 0 0 10px 0; color: #2c3e50;">${statusIcon} Upload Job Status</h3>
+                                <div style="margin-bottom: 8px;"><strong>Job ID:</strong> <code style="background-color: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 3px;">${data.job.id}</code></div>
+                                <div style="margin-bottom: 8px;"><strong>Status:</strong> <span style="color: ${jobStatusColor}; font-weight: bold; text-transform: uppercase;">${data.job.status}</span></div>
+                                ${data.job.asset ? `
+                                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                                        <h4 style="margin: 0 0 8px 0; color: #495057;">Asset Details:</h4>
+                                        <div style="margin-bottom: 6px;"><strong>Asset ID:</strong> <code style="background-color: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 3px;">${data.job.asset.id}</code></div>
+                                        ${data.job.asset.name ? `<div style="margin-bottom: 6px;"><strong>Name:</strong> ${data.job.asset.name}</div>` : ''}
+                                        ${data.job.asset.tags && data.job.asset.tags.length > 0 ? `<div style="margin-bottom: 6px;"><strong>Tags:</strong> ${data.job.asset.tags.join(', ')}</div>` : ''}
+                                    </div>
+                                ` : ''}
+                                ${data.job.error ? `
+                                    <div style="margin-top: 10px; padding: 10px; background-color: rgba(220,53,69,0.1); border-radius: 4px; color: #721c24;">
+                                        <strong>Error:</strong> ${JSON.stringify(data.job.error, null, 2)}
+                                    </div>
+                                ` : ''}
+                                ${data.job.status === 'in_progress' ? `
+                                    <div style="margin-top: 12px; padding: 10px; background-color: rgba(255,193,7,0.1); border-radius: 4px; color: #856404;">
+                                        ⏳ Upload is still in progress. Check again in a few moments.
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                } else {
+                    resultBox.className = 'result-box error';
+                    statusCode.className = 'status-badge error';
+                    if (data.response && data.response.statusCode) {
+                        statusCode.textContent = data.response.statusCode + ' ' + data.response.status;
+                    } else {
+                        statusCode.textContent = 'ERROR';
+                    }
+                    duration.textContent = data.response && data.response.duration ? data.response.duration : 'N/A';
                     responseDetails.textContent = JSON.stringify(data.response || data, null, 2);
                 }
 

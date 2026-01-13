@@ -1,40 +1,34 @@
 package com.example.demo.controller;
 
+import com.example.demo.canva.api.AssetApi;
 import com.example.demo.canva.api.BrandTemplateApi;
 import com.example.demo.canva.api.DesignApi;
-import com.example.demo.canva.api.FolderApi;
 import com.example.demo.canva.api.UserApi;
 import com.example.demo.canva.client.ApiClient;
-import com.example.demo.canva.model.GetBrandTemplateDatasetResponse;
-import com.example.demo.canva.model.GetBrandTemplateResponse;
-import com.example.demo.canva.model.GetDesignResponse;
-import com.example.demo.canva.model.GetListDesignResponse;
-import com.example.demo.canva.model.ListBrandTemplatesResponse;
-import com.example.demo.canva.model.ListFolderItemsResponse;
-import com.example.demo.canva.model.OwnershipType;
-import com.example.demo.canva.model.UserProfileResponse;
+import com.example.demo.canva.model.*;
 import com.example.demo.canva.privateapi.BrandKitApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/test")
 public class ApiTestController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ApiTestController.class);
 
     @Value("${canva.api.base-url:https://api.canva.com/rest}")
     private String baseUrl;
@@ -53,6 +47,8 @@ public class ApiTestController {
             result.put("message", "Please connect to Canva first");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
         }
+
+        logger.info("accessToken: {}", accessToken);
 
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
@@ -909,6 +905,220 @@ public class ApiTestController {
 
         } catch (Exception e) {
             e.printStackTrace();
+            // Prepare error response details
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("error", e.getClass().getSimpleName());
+            responseDetails.put("message", e.getMessage());
+            responseDetails.put("timestamp", Instant.now().toString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", "Unexpected error: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        }
+    }
+
+    @PostMapping("/asset-upload")
+    public ResponseEntity<Map<String, Object>> testCreateAssetUpload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false, defaultValue = "") String assetName,
+            HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Check if user is authenticated
+        String accessToken = (String) session.getAttribute("access_token");
+        if (accessToken == null || accessToken.isEmpty()) {
+            result.put("error", "Not authenticated");
+            result.put("message", "Please connect to Canva first");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
+        }
+
+        // Validate file
+        if (file.isEmpty()) {
+            result.put("error", "No file provided");
+            result.put("message", "Please select a file to upload");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+
+        try {
+            // Use original filename if no name provided
+            String finalAssetName = assetName.isEmpty() ? file.getOriginalFilename() : assetName;
+
+            // Base64 encode the asset name
+            String nameBase64 = Base64.getEncoder().encodeToString(finalAssetName.getBytes());
+
+            // Store request details
+            Map<String, Object> requestDetails = new HashMap<>();
+            requestDetails.put("method", "POST");
+            requestDetails.put("endpoint", "/v1/asset-uploads");
+            requestDetails.put("timestamp", Instant.now().toString());
+            requestDetails.put("authentication", "Bearer token (from session)");
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("name", finalAssetName);
+            metadata.put("name_base64", nameBase64);
+            metadata.put("file_size", file.getSize());
+            metadata.put("content_type", file.getContentType());
+            requestDetails.put("metadata", metadata);
+            result.put("request", requestDetails);
+
+            // Configure API client
+            ApiClient apiClient = new ApiClient();
+            apiClient.setBasePath(baseUrl);
+            apiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
+
+            // Prepare the request manually since we need to send raw bytes
+            String uri = baseUrl + "/v1/asset-uploads";
+
+            // Read file bytes
+            byte[] fileBytes = file.getBytes();
+
+            // Create metadata object and serialize to JSON
+            AssetUploadMetadata assetMetadata = new AssetUploadMetadata();
+            assetMetadata.setNameBase64(nameBase64);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            String metadataJson = objectMapper.writeValueAsString(assetMetadata);
+
+            // Make the API call using RestClient directly
+            long startTime = System.currentTimeMillis();
+            String rawResponse = apiClient.getRestClient()
+                .post()
+                .uri(uri)
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Asset-Upload-Metadata", metadataJson)
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(fileBytes)
+                .retrieve()
+                .body(String.class);
+            long duration = System.currentTimeMillis() - startTime;
+
+            // Parse the response
+            @SuppressWarnings("unchecked")
+            CreateAssetUploadJobResponse uploadResponse = objectMapper.readValue(rawResponse, CreateAssetUploadJobResponse.class);
+
+            // Prepare response details
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("statusCode", 200);
+            responseDetails.put("status", "OK");
+            responseDetails.put("duration", duration + "ms");
+            responseDetails.put("timestamp", Instant.now().toString());
+            responseDetails.put("body", uploadResponse);
+
+            result.put("response", responseDetails);
+            result.put("success", true);
+            result.put("job", uploadResponse.getJob());
+
+            return ResponseEntity.ok(result);
+
+        } catch (IOException e) {
+            // Handle file I/O errors
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("error", "IOException");
+            responseDetails.put("message", e.getMessage());
+            responseDetails.put("timestamp", Instant.now().toString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", "File I/O error: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+
+        } catch (RestClientResponseException e) {
+            // Prepare error response details
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("statusCode", e.getStatusCode().value());
+            responseDetails.put("status", e.getStatusText());
+            responseDetails.put("timestamp", Instant.now().toString());
+            responseDetails.put("errorBody", e.getResponseBodyAsString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+
+        } catch (Exception e) {
+            // Prepare error response details
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("error", e.getClass().getSimpleName());
+            responseDetails.put("message", e.getMessage());
+            responseDetails.put("timestamp", Instant.now().toString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", "Unexpected error: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        }
+    }
+
+    @GetMapping("/asset-upload/{jobId}")
+    public ResponseEntity<Map<String, Object>> testGetAssetUploadJob(
+            @PathVariable String jobId,
+            HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Check if user is authenticated
+        String accessToken = (String) session.getAttribute("access_token");
+        if (accessToken == null || accessToken.isEmpty()) {
+            result.put("error", "Not authenticated");
+            result.put("message", "Please connect to Canva first");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
+        }
+
+        // Prepare request details
+        Map<String, Object> requestDetails = new HashMap<>();
+        requestDetails.put("method", "GET");
+        requestDetails.put("endpoint", "/v1/asset-uploads/" + jobId);
+        requestDetails.put("timestamp", Instant.now().toString());
+        requestDetails.put("authentication", "Bearer token (from session)");
+        requestDetails.put("parameters", Map.of("jobId", jobId));
+
+        result.put("request", requestDetails);
+
+        try {
+            // Configure API client
+            ApiClient apiClient = new ApiClient();
+            apiClient.setBasePath(baseUrl);
+            apiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
+
+            AssetApi assetApi = new AssetApi(apiClient);
+
+            // Make the API call
+            long startTime = System.currentTimeMillis();
+            GetAssetUploadJobResponse jobResponse = assetApi.getAssetUploadJob(jobId);
+            long duration = System.currentTimeMillis() - startTime;
+
+            // Prepare response details
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("statusCode", 200);
+            responseDetails.put("status", "OK");
+            responseDetails.put("duration", duration + "ms");
+            responseDetails.put("timestamp", Instant.now().toString());
+            responseDetails.put("body", jobResponse);
+
+            result.put("response", responseDetails);
+            result.put("success", true);
+            result.put("job", jobResponse.getJob());
+
+            return ResponseEntity.ok(result);
+
+        } catch (RestClientResponseException e) {
+            // Prepare error response details
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("statusCode", e.getStatusCode().value());
+            responseDetails.put("status", e.getStatusText());
+            responseDetails.put("timestamp", Instant.now().toString());
+            responseDetails.put("errorBody", e.getResponseBodyAsString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+
+        } catch (Exception e) {
             // Prepare error response details
             Map<String, Object> responseDetails = new HashMap<>();
             responseDetails.put("error", e.getClass().getSimpleName());
