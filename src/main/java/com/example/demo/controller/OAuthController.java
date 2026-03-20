@@ -138,6 +138,9 @@ public class OAuthController {
             model.addAttribute("accessToken", tokenResponse.get("access_token"));
             model.addAttribute("expiresIn", tokenResponse.get("expires_in"));
 
+            System.out.println("export TOKEN=\"" + tokenResponse.get("access_token") + "\"");
+            System.out.println("export REFRESH_TOKEN=\"" + tokenResponse.get("refresh_token") + "\"");
+
             logger.info("OAuth flow completed successfully");
             return "oauth-success";
 

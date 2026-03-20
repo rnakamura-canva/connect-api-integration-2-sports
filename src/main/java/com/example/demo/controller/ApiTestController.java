@@ -6,6 +6,9 @@ import com.example.demo.canva.api.DesignApi;
 import com.example.demo.canva.api.UserApi;
 import com.example.demo.canva.client.ApiClient;
 import com.example.demo.canva.model.*;
+import com.example.demo.canva.model.CreateDesignRequest;
+import com.example.demo.canva.model.CreateDesignResponse;
+import com.example.demo.canva.model.PresetDesignTypeName;
 import com.example.demo.canva.privateapi.BrandKitApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
@@ -37,11 +40,14 @@ public class ApiTestController {
     }
 
     @PostMapping("/profile")
-    public ResponseEntity<Map<String, Object>> testGetProfile(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> testGetProfile(
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
         // Check if user is authenticated
         String accessToken = (String) session.getAttribute("access_token");
+        String refreshToken = (String) session.getAttribute("refresh_token");
         if (accessToken == null || accessToken.isEmpty()) {
             result.put("error", "Not authenticated");
             result.put("message", "Please connect to Canva first");
@@ -49,13 +55,21 @@ public class ApiTestController {
         }
 
         logger.info("accessToken: {}", accessToken);
+        logger.info("refreshToken: {}", refreshToken);
 
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
         requestDetails.put("method", "GET");
-        requestDetails.put("endpoint", "https://api.canva.com/rest/v1/users/me/profile");
+        requestDetails.put("endpoint", baseUrl + "/v1/users/me/profile");
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
+        Map<String, Object> profileHeadersMap = new java.util.LinkedHashMap<>();
+        profileHeadersMap.put("Authorization", "Bearer ***");
+        profileHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            profileHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", profileHeadersMap);
 
         result.put("request", requestDetails);
 
@@ -126,6 +140,7 @@ public class ApiTestController {
     @PostMapping("/designs")
     public ResponseEntity<Map<String, Object>> testListDesigns(
             @RequestParam(required = false) String query,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -140,7 +155,7 @@ public class ApiTestController {
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
         requestDetails.put("method", "GET");
-        requestDetails.put("endpoint", "https://api.canva.com/rest/v1/designs");
+        requestDetails.put("endpoint", baseUrl + "/v1/designs");
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
         requestDetails.put("parameters", Map.of(
@@ -149,6 +164,13 @@ public class ApiTestController {
             "ownership", "null (all designs)",
             "sortBy", "null (default sort)"
         ));
+        Map<String, Object> designsHeadersMap = new java.util.LinkedHashMap<>();
+        designsHeadersMap.put("Authorization", "Bearer ***");
+        designsHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            designsHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", designsHeadersMap);
 
         result.put("request", requestDetails);
 
@@ -246,7 +268,10 @@ public class ApiTestController {
     }
 
     @GetMapping("/design/{designId}")
-    public ResponseEntity<Map<String, Object>> testGetDesign(@PathVariable String designId, HttpSession session) {
+    public ResponseEntity<Map<String, Object>> testGetDesign(
+            @PathVariable String designId,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
         // Check if user is authenticated
@@ -260,10 +285,17 @@ public class ApiTestController {
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
         requestDetails.put("method", "GET");
-        requestDetails.put("endpoint", "https://api.canva.com/rest/v1/designs/" + designId);
+        requestDetails.put("endpoint", baseUrl + "/v1/designs/" + designId);
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
         requestDetails.put("parameters", Map.of("designId", designId));
+        Map<String, Object> getDesignHeadersMap = new java.util.LinkedHashMap<>();
+        getDesignHeadersMap.put("Authorization", "Bearer ***");
+        getDesignHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            getDesignHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", getDesignHeadersMap);
 
         result.put("request", requestDetails);
 
@@ -330,6 +362,7 @@ public class ApiTestController {
     public ResponseEntity<Map<String, Object>> testListBrandTemplates(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String ownership,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -356,7 +389,7 @@ public class ApiTestController {
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
         requestDetails.put("method", "GET");
-        requestDetails.put("endpoint", "https://api.canva.com/rest/v1/brand-templates");
+        requestDetails.put("endpoint", baseUrl + "/v1/brand-templates");
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
         requestDetails.put("parameters", Map.of(
@@ -366,6 +399,13 @@ public class ApiTestController {
             "sortBy", "null (default sort)",
             "dataset", "null (not specified)"
         ));
+        Map<String, Object> brandTemplatesHeadersMap = new java.util.LinkedHashMap<>();
+        brandTemplatesHeadersMap.put("Authorization", "Bearer ***");
+        brandTemplatesHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            brandTemplatesHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", brandTemplatesHeadersMap);
 
         result.put("request", requestDetails);
 
@@ -459,7 +499,10 @@ public class ApiTestController {
     }
 
     @GetMapping("/brand-template/{brandTemplateId}")
-    public ResponseEntity<Map<String, Object>> testGetBrandTemplate(@PathVariable String brandTemplateId, HttpSession session) {
+    public ResponseEntity<Map<String, Object>> testGetBrandTemplate(
+            @PathVariable String brandTemplateId,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
         // Check if user is authenticated
@@ -473,10 +516,17 @@ public class ApiTestController {
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
         requestDetails.put("method", "GET");
-        requestDetails.put("endpoint", "https://api.canva.com/rest/v1/brand-templates/" + brandTemplateId);
+        requestDetails.put("endpoint", baseUrl + "/v1/brand-templates/" + brandTemplateId);
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
         requestDetails.put("parameters", Map.of("brandTemplateId", brandTemplateId));
+        Map<String, Object> getBrandTemplateHeadersMap = new java.util.LinkedHashMap<>();
+        getBrandTemplateHeadersMap.put("Authorization", "Bearer ***");
+        getBrandTemplateHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            getBrandTemplateHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", getBrandTemplateHeadersMap);
 
         result.put("request", requestDetails);
 
@@ -540,7 +590,10 @@ public class ApiTestController {
     }
 
     @GetMapping("/brand-template-dataset/{brandTemplateId}")
-    public ResponseEntity<Map<String, Object>> testGetBrandTemplateDataset(@PathVariable String brandTemplateId, HttpSession session) {
+    public ResponseEntity<Map<String, Object>> testGetBrandTemplateDataset(
+            @PathVariable String brandTemplateId,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
+            HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
         // Check if user is authenticated
@@ -554,10 +607,17 @@ public class ApiTestController {
         // Prepare request details
         Map<String, Object> requestDetails = new HashMap<>();
         requestDetails.put("method", "GET");
-        requestDetails.put("endpoint", "https://api.canva.com/rest/v1/brand-templates/" + brandTemplateId + "/dataset");
+        requestDetails.put("endpoint", baseUrl + "/v1/brand-templates/" + brandTemplateId + "/dataset");
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
         requestDetails.put("parameters", Map.of("brandTemplateId", brandTemplateId));
+        Map<String, Object> datasetHeadersMap = new java.util.LinkedHashMap<>();
+        datasetHeadersMap.put("Authorization", "Bearer ***");
+        datasetHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            datasetHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", datasetHeadersMap);
 
         result.put("request", requestDetails);
 
@@ -629,6 +689,7 @@ public class ApiTestController {
     @PostMapping("/brand-kits")
     public ResponseEntity<Map<String, Object>> testListBrandKits(
             @RequestParam(required = false) Integer limit,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -658,7 +719,13 @@ public class ApiTestController {
                 params.put("limit", limit);
             }
             requestDetails.put("parameters", params);
-            requestDetails.put("headers", Map.of("Authorization", "Bearer ***"));
+            Map<String, Object> brandKitsHeadersMap = new java.util.LinkedHashMap<>();
+            brandKitsHeadersMap.put("Authorization", "Bearer ***");
+            brandKitsHeadersMap.put("Content-Type", "application/json");
+            if (componentVariants != null && !componentVariants.isEmpty()) {
+                brandKitsHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+            }
+            requestDetails.put("headers", brandKitsHeadersMap);
             result.put("request", requestDetails);
 
             // Make the API call
@@ -716,6 +783,7 @@ public class ApiTestController {
     public ResponseEntity<Map<String, Object>> testListFolderItems(
             @PathVariable String folderId,
             @RequestParam(required = false) String item_types,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -749,7 +817,13 @@ public class ApiTestController {
                 parameters.put("item_types", item_types);
             }
             requestDetails.put("parameters", parameters);
-            requestDetails.put("headers", Map.of("Authorization", "Bearer ***"));
+            Map<String, Object> folderItemsHeadersMap = new java.util.LinkedHashMap<>();
+            folderItemsHeadersMap.put("Authorization", "Bearer ***");
+            folderItemsHeadersMap.put("Content-Type", "application/json");
+            if (componentVariants != null && !componentVariants.isEmpty()) {
+                folderItemsHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+            }
+            requestDetails.put("headers", folderItemsHeadersMap);
             result.put("request", requestDetails);
 
             // Make the API call using raw JSON to avoid deserialization issues
@@ -816,6 +890,7 @@ public class ApiTestController {
     public ResponseEntity<Map<String, Object>> testMoveFolderItem(
             @PathVariable String itemId,
             @RequestBody Map<String, String> requestBody,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -839,6 +914,13 @@ public class ApiTestController {
             body.put("item_id", itemId);
             requestDetails.put("body", body);
             requestDetails.put("timestamp", Instant.now().toString());
+            Map<String, Object> moveFolderHeadersMap = new java.util.LinkedHashMap<>();
+            moveFolderHeadersMap.put("Authorization", "Bearer ***");
+            moveFolderHeadersMap.put("Content-Type", "application/json");
+            if (componentVariants != null && !componentVariants.isEmpty()) {
+                moveFolderHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+            }
+            requestDetails.put("headers", moveFolderHeadersMap);
 
             result.put("request", requestDetails);
 
@@ -923,6 +1005,7 @@ public class ApiTestController {
     public ResponseEntity<Map<String, Object>> testCreateAssetUpload(
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false, defaultValue = "") String assetName,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -960,6 +1043,14 @@ public class ApiTestController {
             metadata.put("file_size", file.getSize());
             metadata.put("content_type", file.getContentType());
             requestDetails.put("metadata", metadata);
+            Map<String, Object> assetUploadHeadersMap = new java.util.LinkedHashMap<>();
+            assetUploadHeadersMap.put("Authorization", "Bearer ***");
+            assetUploadHeadersMap.put("Asset-Upload-Metadata", "{name_base64: \"" + nameBase64 + "\"}");
+            assetUploadHeadersMap.put("Content-Type", "application/octet-stream");
+            if (componentVariants != null && !componentVariants.isEmpty()) {
+                assetUploadHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+            }
+            requestDetails.put("headers", assetUploadHeadersMap);
             result.put("request", requestDetails);
 
             // Configure API client
@@ -1053,9 +1144,139 @@ public class ApiTestController {
         }
     }
 
+    @PostMapping("/create-design")
+    public ResponseEntity<Map<String, Object>> testCreateDesign(
+            @RequestParam(required = false) String designType,
+            @RequestParam(required = false) String assetId,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String sourceDesignId,
+            @RequestParam(required = false) String sourceBrandTemplateId,
+            @RequestParam(required = false) java.util.List<Integer> pageNumbers,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
+            HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+
+        String accessToken = (String) session.getAttribute("access_token");
+        if (accessToken == null || accessToken.isEmpty()) {
+            result.put("error", "Not authenticated");
+            result.put("message", "Please connect to Canva first");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
+        }
+
+        boolean isFromDesign = "from_design".equals(designType);
+        boolean isFromBrandTemplate = "from_brand_template".equals(designType);
+
+        // Prepare request body map (used for both direct calls and display)
+        Map<String, Object> bodyParams = new HashMap<>();
+
+        if (isFromDesign || isFromBrandTemplate) {
+            bodyParams.put("type", designType);
+            if (isFromDesign) {
+                bodyParams.put("design_id", sourceDesignId);
+            } else {
+                bodyParams.put("brand_template_id", sourceBrandTemplateId);
+            }
+            if (pageNumbers != null && !pageNumbers.isEmpty()) {
+                bodyParams.put("page_numbers", pageNumbers);
+            }
+        } else {
+            if (designType != null && !designType.isEmpty()) bodyParams.put("design_type", Map.of("type", "preset", "name", designType));
+        }
+        if (!isFromDesign && !isFromBrandTemplate) {
+            if (assetId != null && !assetId.isEmpty()) bodyParams.put("asset_id", assetId);
+            if (title != null && !title.isEmpty()) bodyParams.put("title", title);
+        }
+
+        // Prepare request details
+        Map<String, Object> requestDetails = new HashMap<>();
+        requestDetails.put("method", "POST");
+        requestDetails.put("endpoint", baseUrl + "/v1/designs");
+        requestDetails.put("timestamp", Instant.now().toString());
+        requestDetails.put("authentication", "Bearer token (from session)");
+        requestDetails.put("body", bodyParams);
+        Map<String, Object> headersMap = new java.util.LinkedHashMap<>();
+        headersMap.put("Authorization", "Bearer ***");
+        headersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            headersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", headersMap);
+        result.put("request", requestDetails);
+
+        try {
+            long startTime = System.currentTimeMillis();
+            org.springframework.web.client.RestClient restClient = org.springframework.web.client.RestClient.create();
+            org.springframework.web.client.RestClient.RequestBodySpec requestSpec = restClient.post()
+                    .uri(baseUrl + "/v1/designs")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            if (componentVariants != null && !componentVariants.isEmpty()) {
+                requestSpec = requestSpec.header("X-Canva-Component-Variants", componentVariants);
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> rawResponse = requestSpec
+                    .body(bodyParams)
+                    .retrieve()
+                    .body(Map.class);
+            long duration = System.currentTimeMillis() - startTime;
+
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("statusCode", 200);
+            responseDetails.put("status", "OK");
+            responseDetails.put("duration", duration + "ms");
+            responseDetails.put("timestamp", Instant.now().toString());
+            responseDetails.put("body", rawResponse);
+            result.put("response", responseDetails);
+            result.put("success", true);
+
+            if (rawResponse != null && rawResponse.containsKey("design")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> designObj = (Map<String, Object>) rawResponse.get("design");
+                Map<String, Object> designInfo = new HashMap<>();
+                designInfo.put("id", designObj.get("id"));
+                designInfo.put("title", designObj.getOrDefault("title", "Untitled"));
+                @SuppressWarnings("unchecked")
+                Map<String, Object> urls = (Map<String, Object>) designObj.get("urls");
+                if (urls != null) {
+                    designInfo.put("edit_url", urls.get("edit_url"));
+                    designInfo.put("view_url", urls.get("view_url"));
+                }
+                result.put("design", designInfo);
+            }
+
+            return ResponseEntity.ok(result);
+
+        } catch (RestClientResponseException e) {
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("statusCode", e.getStatusCode().value());
+            responseDetails.put("status", e.getStatusText());
+            responseDetails.put("timestamp", Instant.now().toString());
+            responseDetails.put("errorBody", e.getResponseBodyAsString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+
+        } catch (Exception e) {
+            Map<String, Object> responseDetails = new HashMap<>();
+            responseDetails.put("error", e.getClass().getSimpleName());
+            responseDetails.put("message", e.getMessage());
+            responseDetails.put("timestamp", Instant.now().toString());
+
+            result.put("response", responseDetails);
+            result.put("success", false);
+            result.put("error", "Unexpected error: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        }
+    }
+
     @GetMapping("/asset-upload/{jobId}")
     public ResponseEntity<Map<String, Object>> testGetAssetUploadJob(
             @PathVariable String jobId,
+            @RequestHeader(value = "X-Canva-Component-Variants", required = false) String componentVariants,
             HttpSession session) {
         Map<String, Object> result = new HashMap<>();
 
@@ -1074,6 +1295,13 @@ public class ApiTestController {
         requestDetails.put("timestamp", Instant.now().toString());
         requestDetails.put("authentication", "Bearer token (from session)");
         requestDetails.put("parameters", Map.of("jobId", jobId));
+        Map<String, Object> getUploadJobHeadersMap = new java.util.LinkedHashMap<>();
+        getUploadJobHeadersMap.put("Authorization", "Bearer ***");
+        getUploadJobHeadersMap.put("Content-Type", "application/json");
+        if (componentVariants != null && !componentVariants.isEmpty()) {
+            getUploadJobHeadersMap.put("X-Canva-Component-Variants", componentVariants);
+        }
+        requestDetails.put("headers", getUploadJobHeadersMap);
 
         result.put("request", requestDetails);
 

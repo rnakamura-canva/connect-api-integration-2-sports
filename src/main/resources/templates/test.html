@@ -338,6 +338,35 @@
         .api-group-header:first-of-type {
             margin-top: 20px;
         }
+        .header-config-panel {
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-config-panel label {
+            font-weight: 600;
+            color: #495057;
+            white-space: nowrap;
+        }
+        .header-config-panel input[type="text"] {
+            flex: 1;
+            max-width: 500px;
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .header-config-panel input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -376,6 +405,13 @@
     <main class="content">
         <h1>API Testing</h1>
         <p style="color: #666; margin: 20px 0;">Test Canva API endpoints and view request/response details.</p>
+
+        <!-- Header Configuration -->
+        <div class="header-config-panel">
+            <input type="checkbox" id="componentVariantsEnabled" title="Enable X-Canva-Component-Variants header" onchange="document.getElementById('componentVariantsValue').disabled = !this.checked;">
+            <label for="componentVariantsValue">X-Canva-Component-Variants</label>
+            <input type="text" id="componentVariantsValue" placeholder="Enter header value" disabled>
+        </div>
 
         <!-- User APIs -->
         <h2 class="api-group-header">👤 User APIs</h2>
@@ -476,6 +512,85 @@
                         <span id="duration3"></span>
                     </div>
                     <div class="code-block" id="responseDetails3"></div>
+                </details>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h2>Create Design</h2>
+            <p style="color: #666; margin: 10px 0;">Create a new Canva design by preset type, from an existing design, from a brand template, or with a custom asset.</p>
+
+            <div style="margin: 20px 0;">
+                <label for="createDesignTypeSelect" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Design Type (optional):</label>
+                <select id="createDesignTypeSelect" onchange="onCreateDesignTypeChange()" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px; background-color: white;">
+                    <option value="">-- No preset type --</option>
+                    <option value="doc">Doc</option>
+                    <option value="whiteboard">Whiteboard</option>
+                    <option value="presentation">Presentation</option>
+                    <option value="from_design">From Design</option>
+                    <option value="from_brand_template">From Brand Template</option>
+                </select>
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">At least one of design type or asset ID must be provided.</p>
+            </div>
+
+            <div id="fromDesignFields" style="display: none;">
+                <div style="margin: 20px 0;">
+                    <label for="sourceDesignIdInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Design ID:</label>
+                    <input type="text" id="sourceDesignIdInput" placeholder="Enter source design ID" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                </div>
+                <div style="margin: 20px 0;">
+                    <label for="fromDesignPageNumbersInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Page Numbers (optional):</label>
+                    <input type="text" id="fromDesignPageNumbersInput" placeholder="e.g., 1, 2, 3" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                    <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">Comma-separated page numbers to copy. Leave empty for all pages.</p>
+                </div>
+            </div>
+
+            <div id="fromBrandTemplateFields" style="display: none;">
+                <div style="margin: 20px 0;">
+                    <label for="sourceBrandTemplateIdInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Brand Template ID:</label>
+                    <input type="text" id="sourceBrandTemplateIdInput" placeholder="Enter brand template ID" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                </div>
+                <div style="margin: 20px 0;">
+                    <label for="fromBrandTemplatePageNumbersInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Page Numbers (optional):</label>
+                    <input type="text" id="fromBrandTemplatePageNumbersInput" placeholder="e.g., 1, 2, 3" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                    <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">Comma-separated page numbers to copy. Leave empty for all pages.</p>
+                </div>
+            </div>
+
+            <div id="createDesignTitleField" style="margin: 20px 0;">
+                <label for="createDesignTitleInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Title (optional):</label>
+                <input type="text" id="createDesignTitleInput" placeholder="e.g., My Holiday Presentation" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">Name for the new design (1–255 characters).</p>
+            </div>
+
+            <div id="createDesignAssetIdField" style="margin: 20px 0;">
+                <label for="createDesignAssetIdInput" style="display: block; font-weight: bold; color: #495057; margin-bottom: 8px;">Asset ID (optional):</label>
+                <input type="text" id="createDesignAssetIdInput" placeholder="e.g., Msd59349ff" style="width: 100%; max-width: 500px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">ID of an image asset to insert into the design.</p>
+            </div>
+
+            <button id="testCreateDesignBtn" class="btn" onclick="testCreateDesign()">
+                Create Design
+                <span id="loadingSpinner12" class="spinner" style="display: none;"></span>
+            </button>
+
+            <div id="resultBox12" class="result-box">
+                <div id="createdDesignDisplay12" style="margin-bottom: 20px;"></div>
+
+                <details class="collapsible-section" open>
+                    <summary>📡 REQUEST</summary>
+                    <div class="code-block" id="requestDetails12"></div>
+                </details>
+
+                <details class="collapsible-section" open>
+                    <summary>📥 RESPONSE</summary>
+                    <div style="margin: 10px 0;">
+                        <span class="label">Status Code:</span>
+                        <span id="statusCode12" class="status-badge"></span>
+                        <span class="label" style="margin-left: 20px;">Duration:</span>
+                        <span id="duration12"></span>
+                    </div>
+                    <div class="code-block" id="responseDetails12"></div>
                 </details>
             </div>
         </div>
@@ -809,6 +924,15 @@
     </main>
 
     <script>
+        function getExtraHeaders() {
+            const enabled = document.getElementById('componentVariantsEnabled').checked;
+            const value = document.getElementById('componentVariantsValue').value.trim();
+            if (enabled && value) {
+                return { 'X-Canva-Component-Variants': value };
+            }
+            return {};
+        }
+
         async function testGetProfile() {
             const btn = document.getElementById('testProfileBtn');
             const spinner = document.getElementById('loadingSpinner');
@@ -827,7 +951,8 @@
                 const response = await fetch('/api/test/profile', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -902,7 +1027,8 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -989,6 +1115,119 @@
             }
         }
 
+        function onCreateDesignTypeChange() {
+            const val = document.getElementById('createDesignTypeSelect').value;
+            const isSource = val === 'from_design' || val === 'from_brand_template';
+            document.getElementById('fromDesignFields').style.display = val === 'from_design' ? 'block' : 'none';
+            document.getElementById('fromBrandTemplateFields').style.display = val === 'from_brand_template' ? 'block' : 'none';
+            document.getElementById('createDesignTitleField').style.display = isSource ? 'none' : 'block';
+            document.getElementById('createDesignAssetIdField').style.display = isSource ? 'none' : 'block';
+        }
+
+        function parsePageNumbers(input) {
+            if (!input || !input.trim()) return [];
+            return input.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+        }
+
+        async function testCreateDesign() {
+            const btn = document.getElementById('testCreateDesignBtn');
+            const spinner = document.getElementById('loadingSpinner12');
+            const resultBox = document.getElementById('resultBox12');
+            const requestDetails = document.getElementById('requestDetails12');
+            const responseDetails = document.getElementById('responseDetails12');
+            const statusCode = document.getElementById('statusCode12');
+            const duration = document.getElementById('duration12');
+            const createdDesignDisplay = document.getElementById('createdDesignDisplay12');
+
+            const designType = document.getElementById('createDesignTypeSelect').value;
+            const title = document.getElementById('createDesignTitleInput').value.trim();
+            const assetId = document.getElementById('createDesignAssetIdInput').value.trim();
+            const sourceDesignId = document.getElementById('sourceDesignIdInput').value.trim();
+            const sourceBrandTemplateId = document.getElementById('sourceBrandTemplateIdInput').value.trim();
+            const fromDesignPageNumbers = parsePageNumbers(document.getElementById('fromDesignPageNumbersInput').value);
+            const fromBrandTemplatePageNumbers = parsePageNumbers(document.getElementById('fromBrandTemplatePageNumbersInput').value);
+
+            if (designType === 'from_design' && !sourceDesignId) {
+                alert('Please provide a Design ID');
+                return;
+            }
+            if (designType === 'from_brand_template' && !sourceBrandTemplateId) {
+                alert('Please provide a Brand Template ID');
+                return;
+            }
+            if (!designType && !assetId) {
+                alert('Please select a design type or provide an asset ID');
+                return;
+            }
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            resultBox.style.display = 'none';
+
+            try {
+                const params = new URLSearchParams();
+                if (designType) params.append('designType', designType);
+                const isSource = designType === 'from_design' || designType === 'from_brand_template';
+                if (!isSource && title) params.append('title', title);
+                if (!isSource && assetId) params.append('assetId', assetId);
+                if (sourceDesignId) params.append('sourceDesignId', sourceDesignId);
+                if (sourceBrandTemplateId) params.append('sourceBrandTemplateId', sourceBrandTemplateId);
+                const pageNums = designType === 'from_design' ? fromDesignPageNumbers : fromBrandTemplatePageNumbers;
+                pageNums.forEach(n => params.append('pageNumbers', n));
+
+                const response = await fetch('/api/test/create-design?' + params.toString(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getExtraHeaders() }
+                });
+
+                const data = await response.json();
+
+                requestDetails.textContent = JSON.stringify(data.request, null, 2);
+
+                if (data.success) {
+                    resultBox.className = 'result-box success';
+                    statusCode.className = 'status-badge success';
+                    statusCode.textContent = data.response.statusCode + ' ' + data.response.status;
+                    duration.textContent = data.response.duration;
+                    responseDetails.textContent = JSON.stringify(data.response.body, null, 2);
+
+                    if (data.design) {
+                        const d = data.design;
+                        const editLink = d.edit_url ? `<a href="${d.edit_url}" target="_blank" style="color: #7d2ae8; text-decoration: none; font-weight: bold;">Open in Canva →</a>` : '';
+                        createdDesignDisplay.innerHTML = `
+                            <div style="background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 16px;">
+                                <h3 style="color: #2e7d32; margin-bottom: 8px;">✅ Design Created</h3>
+                                <div style="font-family: monospace; font-size: 13px; color: #555; margin-bottom: 6px;">ID: ${d.id}</div>
+                                <div style="font-size: 14px; color: #2c3e50; margin-bottom: 8px; font-weight: bold;">${d.title}</div>
+                                ${editLink}
+                            </div>`;
+                    }
+                } else {
+                    resultBox.className = 'result-box error';
+                    statusCode.className = 'status-badge error';
+                    statusCode.textContent = data.response && data.response.statusCode ? data.response.statusCode + ' ' + data.response.status : 'ERROR';
+                    duration.textContent = 'N/A';
+                    responseDetails.textContent = JSON.stringify(data.response || data, null, 2);
+                    createdDesignDisplay.innerHTML = '';
+                }
+
+                resultBox.style.display = 'block';
+
+            } catch (error) {
+                resultBox.className = 'result-box error';
+                statusCode.className = 'status-badge error';
+                statusCode.textContent = 'ERROR';
+                duration.textContent = 'N/A';
+                requestDetails.textContent = 'Failed to make request';
+                responseDetails.textContent = JSON.stringify({ error: error.message }, null, 2);
+                createdDesignDisplay.innerHTML = '';
+                resultBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
         async function testGetDesign() {
             const btn = document.getElementById('testGetDesignBtn');
             const spinner = document.getElementById('loadingSpinner3');
@@ -1016,7 +1255,8 @@
                 const response = await fetch(`/api/test/design/${encodeURIComponent(designId)}`, {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -1100,7 +1340,8 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -1212,7 +1453,8 @@
                 const response = await fetch(`/api/test/brand-template/${encodeURIComponent(brandTemplateId)}`, {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -1286,7 +1528,8 @@
                 const response = await fetch(`/api/test/brand-template-dataset/${encodeURIComponent(brandTemplateId)}`, {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -1362,7 +1605,8 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -1470,7 +1714,8 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
@@ -1594,7 +1839,8 @@
                 const response = await fetch(`/api/test/folders/items/${encodeURIComponent(itemId)}/move`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     },
                     body: JSON.stringify({
                         destination_folder_id: destinationFolderId
@@ -1682,6 +1928,7 @@
 
                 const response = await fetch('/api/test/asset-upload', {
                     method: 'POST',
+                    headers: { ...getExtraHeaders() },
                     body: formData
                 });
 
@@ -1785,7 +2032,8 @@
                 const response = await fetch(`/api/test/asset-upload/${encodeURIComponent(jobId)}`, {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...getExtraHeaders()
                     }
                 });
 
